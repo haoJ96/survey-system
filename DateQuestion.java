@@ -11,7 +11,14 @@ import java.util.Scanner;
  */
 public class DateQuestion extends Question {
     private static final long serialVersionUID = 1L;
-    private final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
+    private transient DateTimeFormatter formatter;
+
+    private DateTimeFormatter getFormatter() {
+        if (formatter == null) {
+            formatter = DateTimeFormatter.ISO_LOCAL_DATE;
+        }
+        return formatter;
+    }
 
     public DateQuestion(String prompt) {
         super(prompt);
@@ -31,7 +38,7 @@ public class DateQuestion extends Question {
             System.out.print("Enter date (YYYY-MM-DD): ");
             String input = scanner.nextLine().trim();
             try {
-                LocalDate.parse(input, formatter);
+                LocalDate.parse(input, getFormatter());
                 answers.add(input);
                 break;
             } catch (DateTimeParseException e) {

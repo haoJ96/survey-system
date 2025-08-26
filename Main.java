@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,7 +61,7 @@ public class Main {
     private static void createNewSurvey() {
         System.out.print("Enter a name for your survey: ");
         String name = scanner.nextLine().trim();
-        if (name.isEmpty()) {
+        if (name == null || name.isEmpty()) {
             System.out.println("Survey name cannot be empty. Returning to main menu.");
             return;
         }
@@ -323,12 +322,52 @@ public class Main {
         }
     }
 
+    /**
+     * Takes a survey by prompting the user for the survey name, loading it,
+     * and then collecting responses. Reuses the same pattern as taking a test.
+     */
     private static void takeSurvey() {
-        if (currentSurvey == null) {
-            System.out.println("You must have a survey loaded in order to take it.");
+        // Prompt user for survey name to take
+        System.out.print("Enter the name of the survey to take: ");
+        String surveyName = scanner.nextLine().trim();
+        if (surveyName.isEmpty()) {
+            System.out.println("Survey name cannot be empty. Returning to survey menu.");
             return;
         }
-        ResponseSet responses = currentSurvey.takeSurvey(scanner);
+        
+        // Find and load the survey file
+        File dir = new File(SURVEY_DIR);
+        File[] files = dir.listFiles();
+        if (files == null || files.length == 0) {
+            System.out.println("No survey files found in " + SURVEY_DIR + ".");
+            return;
+        }
+        
+        // Look for a survey file that matches the name
+        Survey surveyToTake = null;
+        for (File f : files) {
+            if (f.isFile() && f.getName().toLowerCase().contains(surveyName.toLowerCase())) {
+                try {
+                    Survey loaded = Survey.loadFromFile(f.getPath());
+                    if (loaded.getName().equalsIgnoreCase(surveyName)) {
+                        surveyToTake = loaded;
+                        break;
+                    }
+                } catch (IOException | ClassNotFoundException e) {
+                    // Continue searching other files
+                }
+            }
+        }
+        
+        if (surveyToTake == null) {
+            System.out.println("Survey '" + surveyName + "' not found. Please check the name and try again.");
+            return;
+        }
+        
+        // Take the survey using the same pattern as taking a test
+        ResponseSet responses = surveyToTake.takeSurvey(scanner);
+        
+        // Save responses to survey responses directory
         String respFileName = responses.generateFileName();
         File file = new File(SURVEY_RESPONSE_DIR, respFileName);
         try {
@@ -355,7 +394,7 @@ public class Main {
     private static void createNewTest() {
         System.out.print("Enter a name for your test: ");
         String name = scanner.nextLine().trim();
-        if (name.isEmpty()) {
+        if (name == null || name.isEmpty()) {
             System.out.println("Test name cannot be empty. Returning to previous menu.");
             return;
         }
@@ -738,15 +777,50 @@ public class Main {
     }
 
     /**
-     * Takes the current test by prompting the user for answers and saving
-     * the response set.
+     * Takes a test by prompting the user for the test name, loading it,
+     * and then collecting responses. Reuses the same pattern as taking a survey.
      */
     private static void takeTest() {
-        if (currentTest == null) {
-            System.out.println("You must have a test loaded in order to take it.");
+        // Prompt user for test name to take
+        System.out.print("Enter the name of the test to take: ");
+        String testName = scanner.nextLine().trim();
+        if (testName.isEmpty()) {
+            System.out.println("Test name cannot be empty. Returning to test menu.");
             return;
         }
-        ResponseSet responses = currentTest.takeTest(scanner);
+        
+        // Find and load the test file
+        File dir = new File(TEST_DIR);
+        File[] files = dir.listFiles();
+        if (files == null || files.length == 0) {
+            System.out.println("No test files found in " + TEST_DIR + ".");
+            return;
+        }
+        
+        // Look for a test file that matches the name
+        Test testToTake = null;
+        for (File f : files) {
+            if (f.isFile() && f.getName().toLowerCase().contains(testName.toLowerCase())) {
+                try {
+                    Test loaded = Test.loadFromFile(f.getPath());
+                    if (loaded.getName().equalsIgnoreCase(testName)) {
+                        testToTake = loaded;
+                        break;
+                    }
+                } catch (IOException | ClassNotFoundException e) {
+                    // Continue searching other files
+                }
+            }
+        }
+        
+        if (testToTake == null) {
+            System.out.println("Test '" + testName + "' not found. Please check the name and try again.");
+            return;
+        }
+        
+        // Take the test using the same pattern as taking a survey
+        ResponseSet responses = testToTake.takeTest(scanner);
+        
         // Save responses to test responses directory
         String respFileName = responses.generateFileName();
         File file = new File(TEST_RESPONSE_DIR, respFileName);
@@ -987,11 +1061,7 @@ public class Main {
         // Display list of responses
         System.out.println("Select an existing response set:");
         for (int i = 0; i < responses.size(); i++) {
-            ResponseSet rs = responses.get(i);
-            // Format timestamp for readability
-            SimpleDateFormat fmt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String ts = fmt.format(rs.getTimestamp());
-            System.out.println((i + 1) + ") " + test.getName() + " - Response " + (i + 1) + " (" + ts + ")");
+            System.out.println((i + 1) + ") " + test.getName() + " - Response " + (i + 1));
         }
         int respSelection = -1;
         while (true) {
@@ -1029,7 +1099,8 @@ public class Main {
         // Round grade and autoPoints to nearest whole number for display
         int gradeRounded = (int) Math.round(grade);
         int autoPointsRounded = (int) Math.round(autoPoints);
-        System.out.print("You received a " + gradeRounded + " on the test. The test was worth 100 points, but only " + autoPointsRounded + " of those points could be auto graded because there ");
+        String article = (gradeRounded == 8 || gradeRounded == 11 || gradeRounded == 18 || (gradeRounded >= 80 && gradeRounded <= 89)) ? "an" : "a";
+        System.out.print("You received " + article + " " + gradeRounded + " on the test. The test was worth 100 points, but only " + autoPointsRounded + " of those points could be auto graded because there ");
         if (essayCount == 1) {
             System.out.println("was 1 essay question.");
         } else {
